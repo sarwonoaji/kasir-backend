@@ -13,10 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-            $middleware->api(prepend: [
-                EnsureFrontendRequestsAreStateful::class,
-            ]);
-        })
+        // ✅ INI WAJIB UNTUK API ONLY
+        $middleware->redirectGuestsTo(fn () => null);
+
+
+        $middleware->api(prepend: [
+            EnsureFrontendRequestsAreStateful::class,
+        ]);
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();
