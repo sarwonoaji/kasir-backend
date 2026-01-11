@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\ProductInController;
+use App\Http\Controllers\ProductOutController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -32,6 +33,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [ProductInController::class, 'update']);
         Route::delete('/{id}', [ProductInController::class, 'destroy']);
         Route::get('/{id}/print', [ProductInController::class, 'print']);
+    });
+
+    Route::prefix('product-outs')->group(function () {
+        Route::get('/', [ProductOutController::class, 'index']);
+        Route::post('/', [ProductOutController::class, 'store']);
+        Route::get('/{id}', [ProductOutController::class, 'show']);
+        Route::delete('/{id}', [ProductOutController::class, 'destroy']);
     });
  });
     
