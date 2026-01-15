@@ -25,6 +25,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // POS SCAN BARCODE
     Route::get('/scan/{barcode}', [ProductController::class, 'scan']);
+
+    // GENERATE BARCODE
+    Route::get('/products/generate-barcode', [ProductController::class, 'generateBarcode']);
     
     Route::prefix('product-ins')->group(function () {
         Route::get('/', [ProductInController::class, 'index']);

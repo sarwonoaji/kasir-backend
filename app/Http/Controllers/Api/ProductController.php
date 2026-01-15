@@ -16,13 +16,17 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'barcode' => 'required|unique:products,barcode',
+            'barcode' => 'nullable|string|unique:products,barcode',
             'name'    => 'required',
             'price'   => 'required|integer|min:0',
             'stock'   => 'required|integer|min:0',
             'unit'    => 'nullable|string',
             'description' => 'nullable|string',
         ]);
+
+        if (empty($data['barcode'])) {
+            $data['barcode'] = $this->generateEan13();
+        }
 
         return Product::create($data);
     }
@@ -65,5 +69,31 @@ class ProductController extends Controller
         return Product::where('barcode', $barcode)
             ->where('is_active', true)
             ->firstOrFail();
+    }
+
+    private function generateEan13()
+    {
+        // Generate 12 random digits
+        $digits = '';
+        for ($i = 0; $i < 12; $i++) {
+            $digits .= rand(0, 9);
+        }
+
+        // Calculate checksum
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $weight = ($i % 2 == 0) ? 1 : 3;
+            $sum += (int)$digits[$i] * $weight;
+        }
+        $checksum = (10 - ($sum % 10)) % 10;
+
+        return $digits . $checksum;
+    }
+
+    public function generateBarcode()
+    {
+        return response()->json([
+            'barcode' => $this->generateEan13()
+        ]);
     }
 }
