@@ -40,6 +40,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
+            'barcode' => 'nullable|string',
             'name'  => 'required',
             'price' => 'required|integer|min:0',
             'stock' => 'required|integer|min:0',

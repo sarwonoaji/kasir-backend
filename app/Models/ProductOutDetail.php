@@ -12,6 +12,7 @@ class ProductOutDetail extends Model
         'quantity',
         'price',
         'total_price',
+        'discount',
         'isDeleted'
     ];
 

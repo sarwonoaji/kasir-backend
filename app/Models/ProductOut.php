@@ -11,6 +11,10 @@ class ProductOut extends Model
         'date',
         'invoice',
         'total',
+        'money_received',
+        'discount',
+        'return',
+        'payment_method',
         'remark',
         'casher',
         'isDeleted'

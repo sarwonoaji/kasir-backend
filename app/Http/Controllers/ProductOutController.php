@@ -24,7 +24,11 @@ class ProductOutController extends Controller
             'customer_name' => 'required',
             'date' => 'required|date',
             'casher' => 'required',
-            'items' => 'required|array'
+            'items' => 'required|array',
+            'money_received' => 'nullable|numeric',
+            'discount' => 'nullable|numeric',
+            'return' => 'nullable|numeric',
+            'payment_method' => 'nullable|string'
         ]);
 
         DB::transaction(function () use ($request) {
@@ -33,28 +37,33 @@ class ProductOutController extends Controller
                 'customer_name' => $request->customer_name,
                 'date' => $request->date,
                 'invoice' => 'OUT-' . time(),
+                'total' => collect($request->items)->sum('total_price'),
+                'money_received' => $request->money_received,
+                'discount' => $request->discount,
+                'return' => $request->return,
+                'payment_method' => $request->payment_method,
                 'remark' => $request->remark,
-                'casher' => $request->casher,
-                'total' => collect($request->items)->sum('total_price')
+                'casher' => $request->casher
             ]);
 
             foreach ($request->items as $item) {
                 $product = Product::findOrFail($item['product_id']);
 
-                // CEK STOK
+           
                 if ($product->stock < $item['quantity']) {
                     throw new \Exception("Stok {$product->name} tidak cukup");
                 }
 
-                // DETAIL
+     
                 $productOut->details()->create([
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
+                    'discount' => $item['discount'] ?? 0,
                     'total_price' => $item['total_price']
                 ]);
 
-                // KURANGI STOK
+           
                 $product->decrement('stock', $item['quantity']);
             }
         });
