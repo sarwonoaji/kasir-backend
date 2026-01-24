@@ -21,6 +21,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->integer('quantity');
             $table->decimal('price', 12, 2);
+            $table->decimal('total_price', 12, 2);
             $table->boolean('isDeleted')->default(false);
             $table->timestamps();
             });
