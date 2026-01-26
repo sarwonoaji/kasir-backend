@@ -9,12 +9,32 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    // Tampil semua user
-    public function index()
-    {
-        $users = User::all();
-        return response()->json($users);
-    }
+    // Tampil semua user dengan support filter by role
+    // public function index(Request $request)
+    // {
+    //     $query = User::query();
+
+    //     // Filter by role jika parameter ada
+    //     if ($request->has('role')) {
+    //         $query->where('role', $request->query('role'));
+    //     }
+
+    //     $users = $query->all();
+    //     return response()->json($users);
+    // }
+
+    public function index(Request $request)
+        {
+            $query = User::query();
+
+            // Filter by role jika parameter ada
+            if ($request->has('role')) {
+                $query->where('role', $request->query('role'));
+            }
+
+            $users = $query->get();  // ← Ganti .all() dengan .get()
+            return response()->json($users);
+        }
 
     // Tambah user baru
     public function store(Request $request)
@@ -76,3 +96,4 @@ class UserController extends Controller
         return response()->json(['message' => 'User berhasil dihapus']);
     }
 }
+

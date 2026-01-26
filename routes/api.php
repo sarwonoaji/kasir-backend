@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/cashier-sessions/open', [CashierSessionController::class, 'open']);
         Route::post('/cashier-sessions/{id}/close', [CashierSessionController::class, 'close']);
+        Route::get('/cashier-sessions/current', [CashierSessionController::class, 'current']);
         Route::get('/cashier-sessions/active', [CashierSessionController::class, 'activeSession']);
         Route::get('/cashier-sessions/history', [CashierSessionController::class, 'history']);
     });
