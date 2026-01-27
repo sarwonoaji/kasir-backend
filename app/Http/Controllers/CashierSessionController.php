@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashierSession;
+use App\Models\ProductOut;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -77,6 +78,12 @@ class CashierSessionController extends Controller
         return response()->json($session);
     }
 
+    // Alias untuk activeSession
+    public function current()
+    {
+        return $this->activeSession();
+    }
+
     // History session
     public function history(Request $request)
     {
@@ -88,5 +95,25 @@ class CashierSessionController extends Controller
             ->paginate(10);
 
         return response()->json($sessions);
+    }
+
+    public function getTransactionTotal($sessionId)
+    {
+        $session = CashierSession::findOrFail($sessionId);
+        
+        // Pastikan user hanya bisa akses session miliknya sendiri
+        if ($session->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        
+        // Hitung total dari semua ProductOut dalam session ini
+        $total = ProductOut::where('session_cashier_id', $sessionId)
+            ->where('isDeleted', false)
+            ->sum('total');
+        
+        return response()->json([
+            'total' => $total,
+            'session_id' => $sessionId
+        ]);
     }
 }

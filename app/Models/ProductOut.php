@@ -17,6 +17,8 @@ class ProductOut extends Model
         'payment_method',
         'remark',
         'casher',
+        'user_id',
+        'session_cashier_id',
         'isDeleted'
     ];
 
@@ -28,5 +30,15 @@ class ProductOut extends Model
     public function details()
     {
         return $this->hasMany(ProductOutDetail::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function cashierSession()
+    {
+        return $this->belongsTo(CashierSession::class, 'session_cashier_id');
     }
 }

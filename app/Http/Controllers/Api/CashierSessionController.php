@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashierSession;
+use App\Models\ProductOut;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,6 +63,7 @@ class CashierSessionController extends Controller
     {
         $validated = $request->validate([
             'closing_balance' => 'required|numeric|min:0',
+            'expected_balance' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -78,6 +80,7 @@ class CashierSessionController extends Controller
         $session->update([
             'closed_at' => now(),
             'closing_balance' => $validated['closing_balance'],
+            'expected_balance' => $validated['expected_balance'],
             'notes' => $validated['notes'],
             'status' => 'closed',
         ]);
@@ -128,6 +131,7 @@ class CashierSessionController extends Controller
             'shift_id' => $session->shift_id,
             'opening_balance' => $session->opening_balance,
             'closing_balance' => $session->closing_balance,
+            'expected_balance' => $session->expected_balance,
             'is_open' => $session->status === 'open',
             'opened_at' => $session->opened_at,
             'closed_at' => $session->closed_at,
@@ -153,5 +157,28 @@ class CashierSessionController extends Controller
             ->paginate(10);
 
         return response()->json($sessions);
+    }
+
+    public function getTransactionTotal($sessionId)
+    {
+        $session = CashierSession::findOrFail($sessionId);
+
+        /** @var \App\Models\User $authUser */
+        $authUser = Auth::user();
+        
+        // Authorization check - hanya admin atau owner bisa lihat total transaksi session
+        if ($authUser->role !== 'admin' && $session->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized - hanya admin atau owner session yang bisa melihat total transaksi'], 403);
+        }
+        
+        // Hitung total dari semua ProductOut dalam session ini
+        $total = ProductOut::where('session_cashier_id', $sessionId)
+            ->where('isDeleted', false)
+            ->sum('total');
+        
+        return response()->json([
+            'total' => $total,
+            'session_id' => $sessionId
+        ]);
     }
 }

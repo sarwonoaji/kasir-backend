@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductOut;
+use App\Models\CashierSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ProductOutController extends Controller
 {
@@ -31,7 +33,21 @@ class ProductOutController extends Controller
             'payment_method' => 'nullable|string'
         ]);
 
-        DB::transaction(function () use ($request) {
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'User tidak terautentikasi'], 401);
+        }
+
+        $session = CashierSession::where('user_id', $userId)->where('status', 'open')->first();
+
+        if (!$session) {
+            return response()->json(['message' => 'Tidak ada sesi kasir yang terbuka untuk user ini'], 403);
+        }
+
+        /** @var CashierSession $session */
+
+        DB::transaction(function () use ($request, $userId, $session) {
+            /** @var CashierSession $session */
 
             $productOut = ProductOut::create([
                 'customer_name' => $request->customer_name,
@@ -43,7 +59,9 @@ class ProductOutController extends Controller
                 'return' => $request->return,
                 'payment_method' => $request->payment_method,
                 'remark' => $request->remark,
-                'casher' => $request->casher
+                'casher' => $request->casher,
+                'user_id' => $userId,
+                'session_cashier_id' => $session->id
             ]);
 
             foreach ($request->items as $item) {

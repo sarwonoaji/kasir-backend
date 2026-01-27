@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CashierSession extends Model
 {
-    protected $fillable = ['user_id', 'shift_id', 'opened_at', 'closed_at', 'opening_balance', 'closing_balance', 'notes', 'status'];
+    protected $fillable = ['user_id', 'shift_id', 'opened_at', 'closed_at', 'opening_balance', 'closing_balance', 'expected_balance', 'notes', 'status'];
 
     protected $casts = [
         'opened_at' => 'datetime',

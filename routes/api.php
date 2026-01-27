@@ -65,5 +65,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/cashier-sessions/current', [CashierSessionController::class, 'current']);
         Route::get('/cashier-sessions/active', [CashierSessionController::class, 'activeSession']);
         Route::get('/cashier-sessions/history', [CashierSessionController::class, 'history']);
+        Route::get('/cashier-sessions/{id}/transactions/total', [CashierSessionController::class, 'getTransactionTotal']);
     });
     
