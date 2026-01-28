@@ -9,19 +9,19 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    // Tampil semua user dengan support filter by role
-    // public function index(Request $request)
-    // {
-    //     $query = User::query();
+    //Tampil semua user dengan support filter by role
+    public function indexAll(Request $request)
+    {
+        $query = User::query();
 
-    //     // Filter by role jika parameter ada
-    //     if ($request->has('role')) {
-    //         $query->where('role', $request->query('role'));
-    //     }
+        // Filter by role jika parameter ada
+        if ($request->has('role')) {
+            $query->where('role', $request->query('role'));
+        }
 
-    //     $users = $query->all();
-    //     return response()->json($users);
-    // }
+        $users = $query->get();
+        return response()->json($users);
+    }
 
     public function index(Request $request)
         {

@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductOutController;
 use App\Http\Controllers\Api\CashierSessionController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\DashboardController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -19,13 +20,15 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-        Route::prefix('users')->group(function () {
-            Route::get('/', [UserController::class, 'index']);
-            Route::post('/', [UserController::class, 'store']);
-            Route::get('/{id}', [UserController::class, 'show']);
-            Route::put('/{id}', [UserController::class, 'update']);
-            Route::delete('/{id}', [UserController::class, 'destroy']);
-        });
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    Route::prefix('users')->group(function () {
+        Route::get('/get', [UserController::class, 'indexAll']);
+        Route::post('/', [UserController::class, 'store']);
+        Route::get('/{id}', [UserController::class, 'show']);
+        Route::put('/{id}', [UserController::class, 'update']);
+        Route::delete('/{id}', [UserController::class, 'destroy']);
+    });
 
         Route::get('/products', [ProductController::class, 'index']);
         Route::post('/products', [ProductController::class, 'store']);
@@ -55,6 +58,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::prefix('product-outs')->group(function () {
             Route::get('/', [ProductOutController::class, 'index']);
+            Route::get('/transactionToday', [ProductOutController::class, 'getTodayTransactions']);
+            Route::get('/report-daily', [ProductOutController::class, 'getDailyReport']);
+            Route::get('/report-monthly', [ProductOutController::class, 'getMonthlyReport']);
+            Route::get('/report-shift/{shiftId}', [ProductOutController::class, 'getShiftReport']);
+            Route::get('/report-all-daily', [ProductOutController::class, 'getAllUsersDailyReport']);
+            Route::get('/report-all-monthly', [ProductOutController::class, 'getAllUsersMonthlyReport']);
+            Route::get('/report-all-shift/{shiftId}', [ProductOutController::class, 'getAllUsersShiftReport']);
             Route::post('/', [ProductOutController::class, 'store']);
             Route::get('/{id}', [ProductOutController::class, 'show']);
             Route::delete('/{id}', [ProductOutController::class, 'destroy']);
