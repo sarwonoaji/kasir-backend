@@ -9,6 +9,7 @@ use App\Models\CashierSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProductOutController extends Controller
 {
@@ -136,162 +137,202 @@ class ProductOutController extends Controller
         return response()->noContent();
     }
 
-    public function getDailyReport()
-    {
-        $userId = Auth::id();
-        $today = now()->toDateString();
+    
 
-        $report = ProductOut::where('user_id', $userId)
+    public function getFilteredReport(Request $request)
+    {
+        $request->validate([
+            'shift_id' => 'nullable|exists:shifts,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date'
+        ]);
+
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'User tidak terautentikasi'], 401);
+        }
+
+        $queryForReport = ProductOut::where('user_id', $userId)
             ->where('isDeleted', false)
-            ->whereDate('date', $today)
-            ->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $sessionIds = CashierSession::where('shift_id', $request->shift_id)
+                ->where('user_id', $userId)
+                ->pluck('id');
+            $queryForReport->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $report = $queryForReport->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
             ->first();
 
+        $queryForTransactions = ProductOut::where('user_id', $userId)
+            ->where('isDeleted', false)
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $queryForTransactions->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $transactions = $queryForTransactions->with(['details' => function($q) {
+            $q->where('isDeleted', false);
+        }, 'details.product'])->get();
+
         return response()->json([
-            'date' => $today,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'shift_id' => $request->shift_id,
             'user_id' => $userId,
             'total_transactions' => $report->total_transactions ?? 0,
             'total_sales' => $report->total_sales ?? 0,
-            'transactions' => ProductOut::where('user_id', $userId)
-                ->where('isDeleted', false)
-                ->whereDate('date', $today)
-                ->with('details.product')
-                ->get()
+            'transactions' => $transactions
         ]);
     }
 
-    public function getMonthlyReport()
-    {
-        $userId = Auth::id();
-        $currentMonth = now()->month;
-        $currentYear = now()->year;
-
-        $report = ProductOut::where('user_id', $userId)
-            ->where('isDeleted', false)
-            ->whereMonth('date', $currentMonth)
-            ->whereYear('date', $currentYear)
-            ->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
-            ->first();
-
-        return response()->json([
-            'month' => $currentMonth,
-            'year' => $currentYear,
-            'user_id' => $userId,
-            'total_transactions' => $report->total_transactions ?? 0,
-            'total_sales' => $report->total_sales ?? 0,
-            'transactions' => ProductOut::where('user_id', $userId)
-                ->where('isDeleted', false)
-                ->whereMonth('date', $currentMonth)
-                ->whereYear('date', $currentYear)
-                ->with('details.product')
-                ->get()
-        ]);
-    }
-
-    public function getShiftReport($shiftId)
-    {
-        $userId = Auth::id();
-
-        // Get session IDs for the shift
-        $sessionIds = CashierSession::where('shift_id', $shiftId)
-            ->where('user_id', $userId)
-            ->pluck('id');
-
-        $report = ProductOut::whereIn('session_cashier_id', $sessionIds)
-            ->where('isDeleted', false)
-            ->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
-            ->first();
-
-        return response()->json([
-            'shift_id' => $shiftId,
-            'user_id' => $userId,
-            'total_transactions' => $report->total_transactions ?? 0,
-            'total_sales' => $report->total_sales ?? 0,
-            'transactions' => ProductOut::whereIn('session_cashier_id', $sessionIds)
-                ->where('isDeleted', false)
-                ->with('details.product')
-                ->get()
-        ]);
-    }
-
-    public function getAllUsersDailyReport()
+    public function getAllUsersFilteredReport(Request $request)
     {
         $user = Auth::user();
         if (!$user || $user->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $today = now()->toDateString();
+        $request->validate([
+            'shift_id' => 'nullable|exists:shifts,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date'
+        ]);
 
-        $report = ProductOut::where('isDeleted', false)
-            ->whereDate('date', $today)
-            ->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
+        $queryForReport = ProductOut::where('isDeleted', false)
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $sessionIds = CashierSession::where('shift_id', $request->shift_id)
+                ->pluck('id');
+            $queryForReport->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $report = $queryForReport->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
             ->first();
 
+        $queryForTransactions = ProductOut::where('isDeleted', false)
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $queryForTransactions->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $transactions = $queryForTransactions->with(['details' => function($q) {
+            $q->where('isDeleted', false);
+        }, 'details.product', 'user'])->get();
+
         return response()->json([
-            'date' => $today,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'shift_id' => $request->shift_id,
             'total_transactions' => $report->total_transactions ?? 0,
             'total_sales' => $report->total_sales ?? 0,
-            'transactions' => ProductOut::where('isDeleted', false)
-                ->whereDate('date', $today)
-                ->with('details.product', 'user')
-                ->get()
+            'transactions' => $transactions
         ]);
     }
 
-    public function getAllUsersMonthlyReport()
+    public function getFilteredReportPdf(Request $request)
     {
-        $user = Auth::user();
-        if (!$user || $user->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $currentMonth = now()->month;
-        $currentYear = now()->year;
-
-        $report = ProductOut::where('isDeleted', false)
-            ->whereMonth('date', $currentMonth)
-            ->whereYear('date', $currentYear)
-            ->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
-            ->first();
-
-        return response()->json([
-            'month' => $currentMonth,
-            'year' => $currentYear,
-            'total_transactions' => $report->total_transactions ?? 0,
-            'total_sales' => $report->total_sales ?? 0,
-            'transactions' => ProductOut::where('isDeleted', false)
-                ->whereMonth('date', $currentMonth)
-                ->whereYear('date', $currentYear)
-                ->with('details.product', 'user')
-                ->get()
+        $request->validate([
+            'shift_id' => 'nullable|exists:shifts,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date'
         ]);
-    }
 
-    public function getAllUsersShiftReport($shiftId)
-    {
-        $user = Auth::user();
-        if (!$user || $user->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['message' => 'User tidak terautentikasi'], 401);
         }
 
-        // Get session IDs for the shift (all users)
-        $sessionIds = CashierSession::where('shift_id', $shiftId)
-            ->pluck('id');
-
-        $report = ProductOut::whereIn('session_cashier_id', $sessionIds)
+        $queryForReport = ProductOut::where('user_id', $userId)
             ->where('isDeleted', false)
-            ->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $sessionIds = CashierSession::where('shift_id', $request->shift_id)
+                ->where('user_id', $userId)
+                ->pluck('id');
+            $queryForReport->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $report = $queryForReport->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
             ->first();
 
-        return response()->json([
-            'shift_id' => $shiftId,
+        $queryForTransactions = ProductOut::where('user_id', $userId)
+            ->where('isDeleted', false)
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $queryForTransactions->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $transactions = $queryForTransactions->with(['details' => function($q) {
+            $q->where('isDeleted', false);
+        }, 'details.product'])->get();
+
+        $data = [
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'shift_id' => $request->shift_id,
             'total_transactions' => $report->total_transactions ?? 0,
             'total_sales' => $report->total_sales ?? 0,
-            'transactions' => ProductOut::whereIn('session_cashier_id', $sessionIds)
-                ->where('isDeleted', false)
-                ->with('details.product', 'user')
-                ->get()
+            'transactions' => $transactions
+        ];
+
+        $pdf = Pdf::loadView('pdf.report', $data);
+        return $pdf->download('report.pdf');
+    }
+
+    public function getAllUsersFilteredReportPdf(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'shift_id' => 'nullable|exists:shifts,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date'
         ]);
+
+        $queryForReport = ProductOut::where('isDeleted', false)
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $sessionIds = CashierSession::where('shift_id', $request->shift_id)
+                ->pluck('id');
+            $queryForReport->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $report = $queryForReport->selectRaw('COUNT(*) as total_transactions, SUM(total) as total_sales')
+            ->first();
+
+        $queryForTransactions = ProductOut::where('isDeleted', false)
+            ->whereBetween('date', [$request->start_date, $request->end_date]);
+
+        if ($request->has('shift_id')) {
+            $queryForTransactions->whereIn('session_cashier_id', $sessionIds);
+        }
+
+        $transactions = $queryForTransactions->with(['details' => function($q) {
+            $q->where('isDeleted', false);
+        }, 'details.product', 'user'])->get();
+
+        $data = [
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'shift_id' => $request->shift_id,
+            'total_transactions' => $report->total_transactions ?? 0,
+            'total_sales' => $report->total_sales ?? 0,
+            'transactions' => $transactions
+        ];
+
+        $pdf = Pdf::loadView('pdf.report', $data);
+        return $pdf->download('report.pdf');
     }
 }

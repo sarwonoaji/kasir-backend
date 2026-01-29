@@ -59,12 +59,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('product-outs')->group(function () {
             Route::get('/', [ProductOutController::class, 'index']);
             Route::get('/transactionToday', [ProductOutController::class, 'getTodayTransactions']);
-            Route::get('/report-daily', [ProductOutController::class, 'getDailyReport']);
-            Route::get('/report-monthly', [ProductOutController::class, 'getMonthlyReport']);
-            Route::get('/report-shift/{shiftId}', [ProductOutController::class, 'getShiftReport']);
-            Route::get('/report-all-daily', [ProductOutController::class, 'getAllUsersDailyReport']);
-            Route::get('/report-all-monthly', [ProductOutController::class, 'getAllUsersMonthlyReport']);
-            Route::get('/report-all-shift/{shiftId}', [ProductOutController::class, 'getAllUsersShiftReport']);
+           Route::get('/report-filtered', [ProductOutController::class, 'getFilteredReport']);
+           Route::get('/report-filtered-pdf', [ProductOutController::class, 'getFilteredReportPdf']);
+            Route::get('/report-all-filtered', [ProductOutController::class, 'getAllUsersFilteredReport']);
+            Route::get('/report-all-filtered-pdf', [ProductOutController::class, 'getAllUsersFilteredReportPdf']);
             Route::post('/', [ProductOutController::class, 'store']);
             Route::get('/{id}', [ProductOutController::class, 'show']);
             Route::delete('/{id}', [ProductOutController::class, 'destroy']);
