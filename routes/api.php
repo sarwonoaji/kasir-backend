@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\CashierSessionController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\BackupController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -75,5 +76,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/cashier-sessions/active', [CashierSessionController::class, 'activeSession']);
         Route::get('/cashier-sessions/history', [CashierSessionController::class, 'history']);
         Route::get('/cashier-sessions/{id}/transactions/total', [CashierSessionController::class, 'getTransactionTotal']);
+
+        Route::prefix('backups')->group(function () {
+            Route::get('/', [BackupController::class, 'index']);
+            Route::post('/', [BackupController::class, 'create']);
+            Route::get('/{filename}', [BackupController::class, 'download']);
+            Route::delete('/{filename}', [BackupController::class, 'destroy']);
+        });
     });
     
