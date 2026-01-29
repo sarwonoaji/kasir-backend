@@ -8,10 +8,37 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Product::where('is_active', true)->get();
+        $query = Product::where('is_active', true);
+
+        // Handle search
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('barcode', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Handle pagination
+        if ($request->has('per_page')) {
+            $perPage = $request->per_page;
+            $products = $query->paginate($perPage);
+
+            return response()->json([
+                'data' => $products->items(),
+                'total' => $products->total(),
+                'per_page' => $products->perPage(),
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+            ]);
+        }
+
+        // Return all if no pagination requested (fallback)
+        return $query->get();
     }
+
 
     public function store(Request $request)
     {
@@ -20,7 +47,7 @@ class ProductController extends Controller
             'name'    => 'required',
             'price'   => 'required|integer|min:0',
             'stock'   => 'required|integer|min:0',
-            'unit'    => 'nullable|string',
+            'unit'    => 'required|string',
             'description' => 'nullable|string',
         ]);
 
