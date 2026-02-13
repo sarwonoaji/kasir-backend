@@ -105,9 +105,9 @@
                 <th>Kasir</th>
                 <th>Total</th>
                 <th>Detail Produk</th>
-                @if(isset($transactions[0]) && $transactions[0]->user)
+                {{-- @if(isset($transactions[0]) && $transactions[0]->user)
                     <th>User</th>
-                @endif
+                @endif --}}
             </tr>
         </thead>
         <tbody>
@@ -126,9 +126,9 @@
                             @endforeach
                         </ul>
                     </td>
-                    @if(isset($transaction->user))
+                    {{-- @if(isset($transaction->user))
                         <td>{{ $transaction->user->name }}</td>
-                    @endif
+                    @endif --}}
                 </tr>
             @endforeach
         </tbody>
