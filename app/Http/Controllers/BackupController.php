@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use App\Jobs\CreateBackup;
+use Symfony\Component\Process\Process;
 
 class BackupController extends Controller
 {
@@ -78,9 +80,32 @@ class BackupController extends Controller
         }
 
         try {
-            // Jalankan job langsung
-            (new CreateBackup())->handle();
-            return response()->json(['message' => 'Backup created successfully']);
+            // Try to start the backup command directly in background (detached)
+            try {
+                $php = defined('PHP_BINARY') ? PHP_BINARY : 'php';
+                $artisan = base_path('artisan');
+
+                if (strncasecmp(PHP_OS, 'WIN', 3) === 0) {
+                    // Windows: use start to detach the process (no window)
+                    $cmd = array_merge(['cmd', '/c', 'start', '""', '/B'], [$php, $artisan, 'backup:run', '--only-db']);
+                    $process = new Process($cmd);
+                    $process->setWorkingDirectory(base_path());
+                    $process->start();
+                } else {
+                    // Unix: use nohup and shell to background the process
+                    $shell = 'nohup ' . escapeshellcmd($php) . ' ' . escapeshellarg($artisan) . ' backup:run --only-db > /dev/null 2>&1 &';
+                    $process = new Process(['sh', '-c', $shell]);
+                    $process->setWorkingDirectory(base_path());
+                    $process->start();
+                }
+
+                return response()->json(['message' => 'Backup started in background']);
+            } catch (\Throwable $ex) {
+                Log::error('Failed to start background backup process: ' . $ex->getMessage());
+                // Fallback: dispatch job to queue (requires worker)
+                CreateBackup::dispatch();
+                return response()->json(['message' => 'Backup queued; failed to start background process'], 202);
+            }
         } catch (\Exception $e) {
             return response()->json(['message' => 'Backup failed: ' . $e->getMessage()], 500);
         }

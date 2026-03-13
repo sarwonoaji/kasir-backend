@@ -12,7 +12,6 @@ class ProductController extends Controller
     {
         $query = Product::where('is_active', true);
 
-        // Handle search
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -21,7 +20,6 @@ class ProductController extends Controller
             });
         }
 
-        // Handle pagination
         if ($request->has('per_page')) {
             $perPage = $request->per_page;
             $products = $query->paginate($perPage);
@@ -35,7 +33,6 @@ class ProductController extends Controller
             ]);
         }
 
-        // Return all if no pagination requested (fallback)
         return $query->get();
     }
 
@@ -46,19 +43,20 @@ class ProductController extends Controller
             'barcode' => 'nullable|string|unique:products,barcode',
             'name'    => 'required',
             'price'   => 'required|integer|min:0',
-            'stock'   => 'required|integer|min:0',
+            'stock'   => 'nullable|integer|min:0',
             'unit'    => 'required|string',
             'description' => 'nullable|string',
         ]);
 
-        if (empty($data['barcode'])) {
-            $data['barcode'] = $this->generateEan13();
-        }
+        $data['stock'] = $data['stock'] ?? 0;
+
+        // if (empty($data['barcode'])) {
+        //     $data['barcode'] = $this->generateEan13();
+        // }
 
         return Product::create($data);
     }
 
-    // ✅ SHOW BY ID (ADMIN)
     public function show(Product $product)
     {
         return $product;
@@ -70,7 +68,6 @@ class ProductController extends Controller
             'barcode' => 'nullable|string',
             'name'  => 'required',
             'price' => 'required|integer|min:0',
-            'stock' => 'required|integer|min:0',
             'unit'  => 'nullable|string',
             'description' => 'nullable|string',
         ]);
@@ -79,7 +76,6 @@ class ProductController extends Controller
         return $product;
     }
 
-    // ✅ SOFT DELETE POS STYLE
     public function destroy(Product $product)
     {
         $product->update([
@@ -91,7 +87,6 @@ class ProductController extends Controller
         ]);
     }
 
-    // 🔍 KHUSUS POS SCAN BARCODE
     public function scan($barcode)
     {
         return Product::where('barcode', $barcode)
@@ -99,29 +94,29 @@ class ProductController extends Controller
             ->firstOrFail();
     }
 
-    private function generateEan13()
-    {
-        // Generate 12 random digits
-        $digits = '';
-        for ($i = 0; $i < 12; $i++) {
-            $digits .= rand(0, 9);
-        }
+    // private function generateEan13()
+    // {
+    //     // Generate 12 random digits
+    //     $digits = '';
+    //     for ($i = 0; $i < 12; $i++) {
+    //         $digits .= rand(0, 9);
+    //     }
 
-        // Calculate checksum
-        $sum = 0;
-        for ($i = 0; $i < 12; $i++) {
-            $weight = ($i % 2 == 0) ? 1 : 3;
-            $sum += (int)$digits[$i] * $weight;
-        }
-        $checksum = (10 - ($sum % 10)) % 10;
+    //     // Calculate checksum
+    //     $sum = 0;
+    //     for ($i = 0; $i < 12; $i++) {
+    //         $weight = ($i % 2 == 0) ? 1 : 3;
+    //         $sum += (int)$digits[$i] * $weight;
+    //     }
+    //     $checksum = (10 - ($sum % 10)) % 10;
 
-        return $digits . $checksum;
-    }
+    //     return $digits . $checksum;
+    // }
 
-    public function generateBarcode()
-    {
-        return response()->json([
-            'barcode' => $this->generateEan13()
-        ]);
-    }
+    // public function generateBarcode()
+    // {
+    //     return response()->json([
+    //         'barcode' => $this->generateEan13()
+    //     ]);
+    // }
 }

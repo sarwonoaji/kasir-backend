@@ -28,10 +28,10 @@ class ProductOutController extends Controller
             'date' => 'required|date',
             'casher' => 'required',
             'items' => 'required|array',
-            'money_received' => 'nullable|numeric',
+            'money_received' => 'required',
             'discount' => 'nullable|numeric',
             'return' => 'nullable|numeric',
-            'payment_method' => 'nullable|string'
+            'payment_method' => 'required'
         ]);
 
         $userId = Auth::id();

@@ -16,4 +16,7 @@ class Product extends Model
         'is_active',
         'isDeleted',
     ];
+    protected $attributes = [
+        'stock' => 0,
+    ];
 }
